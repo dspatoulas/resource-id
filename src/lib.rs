@@ -226,5 +226,7 @@ mod tests {
         let account_resource = account_resource.unwrap();
 
         assert_eq!(account_resource.resource, ResourceIDResource::Account.to_string());
+
+        println!("{}", account_resource);
     }
 }
