@@ -1,0 +1,21 @@
+[package]
+name = "resource-id"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+# Web Frameworks
+schemars = { version = "0.8.21", features = ["uuid1"] }
+
+# Database libs
+sqlx = { version = "0.8", features = ["runtime-tokio", "tls-rustls", "uuid", "postgres", "time", "migrate"] }
+
+# Core Utility libs
+time = { version = "0.3", features = ["serde", "serde-well-known"] }
+thiserror = "2"
+ulid = "1"
+#strum = { version = "0.26.2", features = ["strum_macros", "derive"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
