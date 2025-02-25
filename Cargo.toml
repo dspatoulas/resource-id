@@ -2,6 +2,12 @@
 name = "resource-id"
 version = "0.1.0"
 edition = "2021"
+authors = [
+    "DJ Spatoulas <dspatoulas21@gmail.com>"
+]
+description = "A step towards generating more useful and intuitive unique resource identifiers"
+license-file = "LICENSE"
+repository = "https://github.com/dspatoulas/resource-id"
 
 [dependencies]
 
