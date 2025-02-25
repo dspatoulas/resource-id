@@ -12,7 +12,7 @@ use sqlx::{Decode, Encode, Postgres, Type};
 use thiserror::Error;
 use crate::ulid::Ulid;
 
-#[derive(Debug, Error)]
+#[derive(Debug, PartialEq, Eq, Error)]
 pub enum ResourceIDError {
     #[error("Unable to decode internal Ulid: {0}")]
     UnableToDecodeUlid(ulid::DecodeError),
@@ -50,13 +50,15 @@ impl JsonSchema for ResourceID {
 }
 
 impl ResourceID {
-    pub fn new(resource: &str) -> Result<Self, ResourceIDError> {
+    pub fn new<S: ToString>(resource: S) -> Result<Self, ResourceIDError> {
         let ulid = Ulid::new();
 
-        Self::validate_resource(resource)?;
+        let resource = resource.to_string().to_uppercase();
+
+        Self::validate_resource(&resource)?;
 
         Ok(Self {
-            resource: resource.to_uppercase(),
+            resource,
             ulid,
         })
     }
@@ -64,17 +66,15 @@ impl ResourceID {
 
     fn validate_resource<S: ToString>(resource: S) -> Result<(), ResourceIDError> {
         let value = resource.to_string();
-        if value.len() < 4 {
+        if value.len() != 4 {
             Err(ResourceIDError::InvalidIdentifierResourceLength(
                 value,
             ))
-        } else {
+        }
+        else {
             Ok(())
         }
     }
-
-
-    // Should there be a method to get_resource_type?
 }
 
 impl Display for ResourceID {
@@ -147,28 +147,84 @@ impl<'de> Deserialize<'de> for ResourceID {
 
 #[cfg(test)]
 mod tests {
+    use strum::{Display, EnumString};
     use super::*;
 
     #[test]
-    fn resource_id_minimal_length_error() {
-        let id = ResourceID::new("foo");
+    fn resource_id_min_length_error() {
+        let invalid_id = "FOO";
+
+        let id = ResourceID::new(invalid_id);
 
         assert!(id.is_err());
+
+        assert_eq!(id.err(), Some(ResourceIDError::InvalidIdentifierResourceLength(invalid_id.to_string())));
     }
 
     #[test]
-    fn resource_id_serialization() {
-        let id = ResourceID::new("user").unwrap();
+    fn resource_id_max_length_error() {
+        let invalid_id = "FOOBAR";
 
-        assert_eq!(&id.to_string()[..4], "USER");
+        let id = ResourceID::new(invalid_id);
+
+        assert!(id.is_err());
+
+        assert_eq!(id.err(), Some(ResourceIDError::InvalidIdentifierResourceLength(invalid_id.to_string())));
     }
 
-    // TODO: Add a test that shows how to use strum with this library
-    // #[derive(Debug, Clone, PartialEq, Eq, EnumString, Display, JsonSchema)]
-    // pub enum ResourceIDResource {
-    //     #[strum(serialize = "USER")]
-    //     User,
-    //     #[strum(serialize = "ACCT")]
-    //     Account,
-    // }
+    #[test]
+    fn invalid_ulid_error() {
+        let invalid_ulid = format!("USER{}", 1234);
+
+        let result = ResourceID::from_str(&invalid_ulid);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn serialize_resource_id() {
+        let valid_resource = "user";
+
+        let id = ResourceID::new(valid_resource).unwrap();
+
+        assert_eq!(&id.to_string()[..4], valid_resource.to_uppercase());
+
+        assert_eq!(id.resource, valid_resource.to_uppercase());
+    }
+
+    #[test]
+    fn deserialize_resource_id() {
+        let valid_resource = "USER";
+        let valid_ulid = Ulid::new();
+
+        let value = format!("{}{}", valid_resource, valid_ulid.to_string());
+
+        let id = value.parse::<ResourceID>();
+
+        assert!(id.is_ok());
+
+        let id = id.unwrap();
+
+        assert_eq!(id.resource, valid_resource);
+        assert_eq!(id.ulid, valid_ulid);
+    }
+
+    #[test]
+    fn strum_resource_id() {
+        #[derive(Debug, Clone, PartialEq, Eq, EnumString, Display, JsonSchema)]
+        enum ResourceIDResource {
+            #[strum(serialize = "USER")]
+            User,
+            #[strum(serialize = "ACCT")]
+            Account,
+        }
+
+        let account_resource = ResourceID::new(ResourceIDResource::Account);
+
+        assert!(account_resource.is_ok());
+
+        let account_resource = account_resource.unwrap();
+
+        assert_eq!(account_resource.resource, ResourceIDResource::Account.to_string());
+    }
 }

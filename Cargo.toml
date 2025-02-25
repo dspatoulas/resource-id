@@ -15,7 +15,9 @@ sqlx = { version = "0.8", features = ["runtime-tokio", "tls-rustls", "uuid", "po
 time = { version = "0.3", features = ["serde", "serde-well-known"] }
 thiserror = "2"
 ulid = "1"
-#strum = { version = "0.26.2", features = ["strum_macros", "derive"] }
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+strum = { version = "0.27", features = ["strum_macros", "derive"] }
